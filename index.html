@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Supply — Supplier Sync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --topbar:#1a1a1a; --sidebar:#f7f7f7; --content:#f1f1f1; --surface:#ffffff;
+  --card-border:#e3e3e3; --hairline:#f1f1f1; --text:#303030; --heading:#1a1a1a;
+  --subdued:#616161; --muted:#919191; --blue:#005bd3; --focus:rgba(0,91,211,0.15);
+  --input-border:#d4d4d4; --green:#36a569; --green-text:#1f7a3f; --red:#d72c0d;
+  --badge-blue-bg:#e4edff; --badge-blue-text:#1f5199; --badge-green-bg:#e4f5e9; --badge-green-text:#1f7a3f;
+  --badge-yellow-bg:#fff5e1; --badge-yellow-text:#9e6c00; --badge-grey-bg:#ebebeb; --badge-grey-text:#616161;
+  --avatar:#50B498; --selected-row:#eaf3ff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;color:var(--text);background:var(--content);-webkit-font-smoothing:antialiased}
+.tabular{font-variant-numeric:tabular-nums}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit}
+a{color:var(--blue);text-decoration:none}
+
+/* ===== CHROME ===== */
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:var(--topbar);display:flex;align-items:center;padding:0 16px;z-index:100;gap:16px}
+.topbar-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.topbar-logo .mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#d4af37,#b8860b);display:flex;align-items:center;justify-content:center;font-size:14px;color:#1a1a1a;font-weight:700}
+.topbar-search{flex:1;max-width:480px;margin:0 auto;position:relative}
+.topbar-search input{width:100%;height:32px;background:#303030;border:1px solid #444;border-radius:8px;color:#e3e3e3;padding:0 12px 0 34px;font-size:13px;cursor:pointer}
+.topbar-search input::placeholder{color:#9a9a9a}
+.topbar-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.7;pointer-events:none}
+.topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.topbar-icon-btn{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative}
+.topbar-icon-btn:hover{background:#303030}
+.notif-dot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--green);border:1.5px solid var(--topbar)}
+.store-switcher{display:flex;align-items:center;gap:8px;background:#303030;border-radius:8px;height:32px;padding:0 8px 0 6px}
+.store-switcher:hover{background:#3d3d3d}
+.store-avatar{width:22px;height:22px;border-radius:6px;background:var(--avatar);color:#08231b;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center}
+.store-name{color:#e3e3e3;font-size:13px;font-weight:500}
+
+.savebar{position:fixed;top:0;left:0;right:0;height:56px;background:#1a1a1a;z-index:130;display:none;align-items:center;padding:0 16px}
+.savebar.active{display:flex}
+.savebar-status{display:flex;align-items:center;gap:8px;color:#e3e3e3;font-size:13px;font-weight:500;margin:0 auto;padding-left:120px}
+.savebar-actions{display:flex;gap:8px;align-items:center}
+.savebar-discard{background:transparent;border:1px solid #616161;color:#e3e3e3;height:32px;border-radius:8px;padding:0 14px;font-weight:600;font-size:13px}
+.savebar-discard:hover{background:#303030}
+.savebar-save{background:#404040;color:#8a8a8a;height:32px;border-radius:8px;padding:0 14px;font-weight:600;font-size:13px;cursor:not-allowed}
+.savebar-save.enabled{background:var(--green);color:#fff;cursor:pointer}
+.savebar-save.enabled:hover{background:#2e9059}
+
+.sidebar{position:fixed;top:56px;left:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--card-border);overflow-y:auto;padding:8px 12px;z-index:90}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;color:var(--text);font-size:13px;font-weight:500;margin-bottom:1px;cursor:pointer;position:relative}
+.nav-item:hover{background:#ededed}
+.nav-item.dimmed{color:var(--muted)}
+.nav-item.dimmed svg{opacity:.5}
+.nav-item.active{background:#e3e3e3;font-weight:600;color:var(--heading)}
+.nav-item svg{flex-shrink:0}
+.nav-count{margin-left:auto;background:#e3e3e3;color:var(--subdued);font-size:11px;font-weight:600;border-radius:8px;padding:1px 7px}
+.nav-item.active .nav-count{background:#d4d4d4}
+.nav-sub{padding-left:40px;font-weight:500;color:var(--subdued)}
+.nav-sub.active{background:#e3e3e3;color:var(--heading);font-weight:600}
+.nav-section-label{font-size:11px;font-weight:600;color:var(--muted);padding:14px 8px 4px}
+.nav-divider{height:1px;background:var(--card-border);margin:8px 4px}
+
+.main{position:fixed;top:56px;left:240px;right:0;bottom:0;overflow-y:auto;background:var(--content)}
+.admin-content{max-width:1100px;margin:0 auto;padding:20px 32px 90px}
+.page-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px}
+.page-back{width:30px;height:30px;border-radius:8px;border:1px solid var(--card-border);background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.page-back:hover{background:#fafafa}
+.page-title{font-size:20px;font-weight:700;color:var(--heading);display:flex;align-items:center;gap:10px}
+.page-subtitle{font-size:13px;color:var(--subdued);margin-top:3px;max-width:640px}
+.page-title-wrap{flex:1}
+.page-header-actions{display:flex;gap:8px;flex-shrink:0}
+
+.layout-2col{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+@media(max-width:1000px){.layout-2col{grid-template-columns:1fr}}
+
+/* ===== CARD ===== */
+.p-card{background:var(--surface);border:1px solid var(--card-border);border-radius:12px;margin-bottom:16px}
+.p-card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0}
+.p-card-title{font-size:14px;font-weight:600;color:var(--heading)}
+.p-card-section{padding:16px 20px}
+.p-card-section + .p-card-section{border-top:1px solid var(--hairline)}
+.p-card-foot{padding:12px 16px;border-top:1px solid var(--hairline);display:flex;justify-content:center;align-items:center;gap:6px}
+
+/* ===== BUTTONS ===== */
+.btn{height:36px;border-radius:8px;padding:0 14px;font-size:13px;font-weight:600;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
+.btn-sm{height:30px;padding:0 11px;font-size:12px}
+.btn-primary{background:var(--text);color:#fff}
+.btn-primary:hover{background:var(--heading)}
+.btn-primary:disabled{background:#b5b5b5;cursor:not-allowed}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid #c9cccf}
+.btn-secondary:hover{background:#f7f7f7}
+.btn-secondary:disabled{color:#b5b5b5;cursor:not-allowed}
+.btn-plain{background:transparent;color:var(--blue);font-weight:600;padding:0 4px;height:auto}
+.btn-plain:hover{text-decoration:underline}
+.btn-critical{background:var(--surface);color:var(--red);border:1px solid #e0a9a0}
+.btn-critical:hover{background:#fff5f3}
+
+/* ===== BADGES ===== */
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:600;line-height:1.6}
+.badge-green{background:var(--badge-green-bg);color:var(--badge-green-text)}
+.badge-yellow{background:var(--badge-yellow-bg);color:var(--badge-yellow-text)}
+.badge-blue{background:var(--badge-blue-bg);color:var(--badge-blue-text)}
+.badge-grey{background:var(--badge-grey-bg);color:var(--badge-grey-text)}
+.badge .dot{width:7px;height:7px;border-radius:50%}
+.badge-green .dot{background:var(--green)}
+.badge-yellow .dot{background:#e0a000}
+.badge-grey .dot{background:#919191}
+button.badge{border:none}
+
+/* ===== FORM ===== */
+label.field-label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+label.field-label .req{color:var(--red);margin-left:2px}
+.field-hint{font-size:12px;color:var(--subdued);margin-top:4px}
+.input,.select,.textarea{width:100%;border:1px solid var(--input-border);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--text);background:#fff}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px var(--focus)}
+.textarea{resize:vertical;min-height:72px}
+.select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%23616161' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.input-search{position:relative}
+.input-search input{padding-left:34px}
+.input-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none}
+.input-prefix{position:relative}
+.input-prefix .prefix{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--subdued);font-size:13px;pointer-events:none}
+.input-prefix .suffix{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--subdued);font-size:13px;pointer-events:none}
+.input-prefix input{padding-left:24px}
+.input-prefix.has-suffix input{padding-right:28px}
+
+/* segmented (Polaris ButtonGroup segmented) */
+.seg{display:inline-flex;border:1px solid var(--input-border);border-radius:8px;overflow:hidden}
+.seg button{height:32px;padding:0 12px;background:#fff;font-size:12px;font-weight:600;color:var(--subdued);border-right:1px solid var(--input-border)}
+.seg button:last-child{border-right:none}
+.seg button.active{background:#f1f1f1;color:var(--heading)}
+
+/* checkbox (Polaris) */
+.cbx{width:18px;height:18px;border:1.5px solid #8a8a8a;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;background:#fff;cursor:pointer;flex-shrink:0;transition:all .12s}
+.cbx svg{display:none}
+.cbx.checked,.cbx.partial{background:var(--blue);border-color:var(--blue)}
+.cbx.checked svg,.cbx.partial svg{display:block}
+
+/* ===== INDEX TABLE ===== */
+.p-table{width:100%;border-collapse:collapse}
+.p-table th{text-align:left;font-size:12px;font-weight:600;color:var(--subdued);padding:10px 12px;border-bottom:1px solid var(--card-border);white-space:nowrap}
+.p-table td{padding:11px 12px;border-bottom:1px solid var(--hairline);font-size:13px;vertical-align:middle}
+.p-table tr:last-child td{border-bottom:none}
+.p-table tbody tr.row-hover{cursor:pointer}
+.p-table tbody tr.row-hover:hover{background:#fafafa}
+.p-table tbody tr.selected{background:var(--selected-row)}
+.p-table tbody tr.selected:hover{background:#e0eeff}
+.col-check{width:20px;padding-right:0}
+.cell-right{text-align:right}
+.cell-center{text-align:center}
+.sortable{cursor:pointer;user-select:none}
+.sortable:hover{color:var(--text)}
+.sort-ind{display:inline-flex;vertical-align:middle;margin-left:4px;opacity:.5}
+.sortable.active{color:var(--heading)}
+.sortable.active .sort-ind{opacity:1}
+.prod-cell{display:flex;align-items:center;gap:12px}
+.prod-thumb{width:40px;height:40px;border-radius:8px;border:1px solid var(--card-border);object-fit:cover;background:#faf7ef;flex-shrink:0}
+.prod-thumb-lg{width:120px;height:120px;border-radius:12px}
+.prod-thumb-empty{width:40px;height:40px;border-radius:8px;border:1px dashed #d4d4d4;display:flex;align-items:center;justify-content:center;color:#bbb;flex-shrink:0}
+.prod-thumb-empty.lg{width:120px;height:120px;border-radius:12px}
+.prod-title{font-weight:500;color:var(--heading);line-height:1.3}
+.prod-title.link:hover{color:var(--blue);text-decoration:underline}
+.prod-meta{font-size:12px;color:var(--subdued);margin-top:2px}
+.price-blue{color:var(--blue);font-weight:600}
+.cost-muted{color:var(--subdued)}
+.margin-pos{color:var(--green-text);font-weight:600}
+.icon-btn{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.icon-btn:hover{background:#f1f1f1}
+
+/* bulk action bar */
+.bulk-bar{display:flex;align-items:center;gap:12px;background:#f7faff;border:1px solid #b6d4fe;border-radius:10px;padding:8px 12px;margin-bottom:12px}
+.bulk-count{font-weight:600;color:#1f5199;font-size:13px}
+.bulk-actions{display:flex;gap:6px;margin-left:auto}
+
+/* tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--card-border);padding:0 8px}
+.tab{padding:12px;font-size:13px;font-weight:500;color:var(--subdued);border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--heading);font-weight:600;border-bottom-color:var(--text)}
+
+/* stat tiles */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+@media(max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--surface);border:1px solid var(--card-border);border-radius:12px;padding:16px;text-align:left}
+.stat-card.clickable{cursor:pointer;transition:border-color .12s}
+.stat-card.clickable:hover{border-color:#c9cccf}
+.stat-label{font-size:12px;color:var(--subdued);font-weight:500}
+.stat-value{font-size:24px;font-weight:700;color:var(--heading);margin-top:8px;line-height:1}
+.stat-sub{font-size:12px;color:var(--subdued);margin-top:6px}
+
+/* banner */
+.banner{border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;border:1px solid}
+.banner-info{background:#f0f6ff;border-color:#b6d4fe}
+.banner-success{background:#f0faf4;border-color:#aedcc0}
+.banner-warning{background:#fff8ec;border-color:#f2d28a}
+.banner .ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.banner-info .ico{background:#d6e6ff}
+.banner-success .ico{background:#d6f0e0}
+.banner-warning .ico{background:#fbeacc}
+.banner .txt{flex:1}
+.banner .ttl{font-weight:600;font-size:13px}
+.banner-info .ttl{color:#1f5199}
+.banner-success .ttl{color:#1f7a3f}
+.banner-warning .ttl{color:#9e6c00}
+.banner .sub{font-size:12px;margin-top:2px;color:var(--subdued)}
+
+/* log list */
+.log-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--hairline)}
+.log-row:last-child{border-bottom:none}
+.log-ico{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.log-ico.ok{background:var(--badge-green-bg)}
+.log-ico.warn{background:var(--badge-yellow-bg)}
+.log-ico.err{background:#fde7e2}
+.log-main{flex:1}
+.log-title{font-size:13px;font-weight:500;color:var(--heading)}
+.log-meta{font-size:12px;color:var(--subdued);margin-top:2px}
+.log-time{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* empty state */
+.empty-state{text-align:center;padding:44px 24px}
+.empty-state .ico{width:56px;height:56px;border-radius:14px;background:#f1f1f1;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.empty-state h3{font-size:15px;font-weight:600;color:var(--heading);margin-bottom:6px}
+.empty-state p{font-size:13px;color:var(--subdued);max-width:380px;margin:0 auto 16px}
+
+/* rule rows */
+.rule-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--card-border);border-radius:10px;margin-bottom:10px}
+.rule-scope{flex:1}
+.rule-scope .scope-name{font-weight:600;color:var(--heading)}
+.rule-scope .scope-meta{font-size:12px;color:var(--subdued);margin-top:2px}
+.rule-controls{display:flex;align-items:center;gap:8px}
+
+/* connection card */
+.conn-card{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--card-border);border-radius:10px}
+.conn-logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#d4af37,#9a7209);display:flex;align-items:center;justify-content:center;color:#1a1a1a;font-weight:700;font-size:15px;flex-shrink:0}
+.conn-logo.alt{background:linear-gradient(135deg,#6a7bd4,#3a4ba0);color:#fff}
+.conn-info{flex:1}
+.conn-name{font-weight:600;color:var(--heading);font-size:14px;display:flex;align-items:center;gap:8px}
+.conn-meta{font-size:12px;color:var(--subdued);margin-top:3px}
+.conn-add{border:1px dashed #c9cccf;border-radius:10px;padding:16px;display:flex;align-items:center;gap:14px;background:#fafafa}
+.conn-add:hover{background:#f3f3f3;cursor:pointer}
+.conn-add .conn-logo{background:#ececec;color:#aaa}
+
+/* description list / kv */
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--hairline);font-size:13px;gap:16px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--subdued)}
+.kv .v{color:var(--heading);font-weight:500;text-align:right}
+
+/* setting toggle (Polaris SettingToggle) */
+.setting-toggle{display:flex;align-items:center;gap:16px}
+.setting-toggle .st-text{flex:1}
+.setting-toggle .st-text .st-title{font-weight:600;color:var(--heading);display:flex;align-items:center;gap:8px}
+.setting-toggle .st-text .st-desc{font-size:12px;color:var(--subdued);margin-top:3px}
+
+/* ===== MODAL ===== */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;animation:fadeIn .15s ease}
+.modal-backdrop.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:620px;max-height:90vh;display:flex;flex-direction:column;animation:slideUp .18s ease;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+.modal-lg{max-width:820px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--card-border);flex-shrink:0}
+.modal-title{font-size:16px;font-weight:700;color:var(--heading)}
+.modal-close{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--subdued)}
+.modal-close:hover{background:#f1f1f1}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--card-border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.modal-foot .right{display:flex;gap:8px;margin-left:auto}
+
+/* resource picker */
+.rp-toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.rp-head{display:grid;grid-template-columns:28px 1fr 100px 110px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--card-border);font-size:12px;font-weight:600;color:var(--subdued)}
+.rp-row{display:grid;grid-template-columns:28px 1fr 100px 110px;gap:8px;padding:10px 12px;align-items:center;border-bottom:1px solid var(--hairline);cursor:pointer}
+.rp-row:hover{background:#fafafa}
+.rp-row.sel{background:var(--selected-row)}
+.rp-prod{display:flex;align-items:center;gap:10px}
+
+/* popover (Polaris Popover + ActionList) */
+.popover{position:fixed;background:#fff;border:1px solid var(--card-border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.16);padding:6px;z-index:400;min-width:190px;animation:popIn .12s ease}
+.action-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border-radius:7px;font-size:13px;color:var(--text);font-weight:500}
+.action-item:hover{background:#f1f1f1}
+.action-item.destructive{color:var(--red)}
+.action-item.destructive:hover{background:#fff5f3}
+.action-item svg{flex-shrink:0;opacity:.8}
+.action-item.checked-item{justify-content:space-between}
+.popover-divider{height:1px;background:var(--hairline);margin:5px 4px}
+.popover-label{font-size:11px;font-weight:600;color:var(--muted);padding:6px 10px 4px}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:500;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{padding:11px 16px;border-radius:10px;font-size:13px;font-weight:500;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.18);animation:slideUpToast .25s ease;display:flex;align-items:center;gap:9px;max-width:440px}
+.toast-success{background:#1a1a1a}
+.toast-error{background:var(--red)}
+.toast-info{background:var(--blue)}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUpToast{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+.confidential-pill{display:inline-flex;align-items:center;gap:5px;background:#f3ecff;color:#6b3fa0;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600}
+.muted-note{font-size:12px;color:var(--subdued);display:flex;align-items:flex-start;gap:6px;margin-top:12px;line-height:1.5}
+.muted-note svg{flex-shrink:0;margin-top:1px}
+.mb-0{margin-bottom:0}
+.gap8{display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo"><span class="mark">S</span></div>
+  <div class="topbar-search">
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#9a9a9a" stroke-width="1.6"/><path d="M14 14l3.5 3.5" stroke="#9a9a9a" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input type="text" placeholder="Search the admin" onclick="topSearch(this)" readonly>
+  </div>
+  <div class="topbar-right">
+    <button class="topbar-icon-btn" onclick="helpMenu(this)" title="Help">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#c9c9c9" stroke-width="1.4"/><path d="M8 8a2 2 0 113 1.7c-.6.4-1 .8-1 1.6" stroke="#c9c9c9" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="14" r=".9" fill="#c9c9c9"/></svg>
+    </button>
+    <button class="topbar-icon-btn" onclick="notifMenu(this)" title="Notifications">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3a4 4 0 00-4 4v3l-1.3 2.2a.5.5 0 00.44.8h9.72a.5.5 0 00.44-.8L14 10V7a4 4 0 00-4-4z" stroke="#c9c9c9" stroke-width="1.4"/><path d="M8 16a2 2 0 004 0" stroke="#c9c9c9" stroke-width="1.4"/></svg>
+      <span class="notif-dot"></span>
+    </button>
+    <button class="store-switcher" onclick="storeMenu(this)">
+      <span class="store-avatar">GS</span><span class="store-name">Gold Supply</span>
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#9a9a9a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="savebar" id="savebar">
+  <div class="savebar-status">
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#e3e3e3" stroke-width="1.4"/><path d="M10 6v4l2.5 1.5" stroke="#e3e3e3" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span id="savebarText">Unsaved changes</span>
+  </div>
+  <div class="savebar-actions">
+    <button class="savebar-discard" onclick="discardChanges()">Discard</button>
+    <button class="savebar-save" id="savebarSave" onclick="saveChanges()">Save</button>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <a class="nav-item dimmed" onclick="dimClick('Home')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9l7-5 7 5v7a1 1 0 01-1 1h-4v-4H8v4H4a1 1 0 01-1-1V9z" stroke="#616161" stroke-width="1.4" stroke-linejoin="round"/></svg>Home</a>
+  <a class="nav-item dimmed" onclick="dimClick('Orders')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 5h12v11a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" stroke="#616161" stroke-width="1.4"/><path d="M7 3h6v2H7zM7 9h6M7 12h4" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/></svg>Orders<span class="nav-count">3</span></a>
+  <a class="nav-item dimmed" onclick="dimClick('Products')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3l6 3.5v7L10 17l-6-3.5v-7L10 3z" stroke="#616161" stroke-width="1.4" stroke-linejoin="round"/><path d="M4 6.5l6 3.5 6-3.5M10 10v7" stroke="#616161" stroke-width="1.4" stroke-linejoin="round"/></svg>Products</a>
+  <a class="nav-item dimmed" onclick="dimClick('Customers')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="#616161" stroke-width="1.4"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/></svg>Customers</a>
+  <a class="nav-item dimmed" onclick="dimClick('Marketing')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 8v4h3l5 3V5L7 8H4z" stroke="#616161" stroke-width="1.4" stroke-linejoin="round"/><path d="M15 8c1 1 1 3 0 4" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/></svg>Marketing</a>
+  <a class="nav-item dimmed" onclick="dimClick('Discounts')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="3.5" width="13" height="13" rx="3" stroke="#616161" stroke-width="1.4"/><path d="M7 7.5a.5.5 0 100-1 .5.5 0 000 1zM13 13.5a.5.5 0 100-1 .5.5 0 000 1zM6 14L14 6" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/></svg>Discounts</a>
+  <a class="nav-item dimmed" onclick="dimClick('Content')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="12" rx="2" stroke="#616161" stroke-width="1.4"/><path d="M7 8h6M7 11h4" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/></svg>Content</a>
+  <a class="nav-item dimmed" onclick="dimClick('Analytics')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 16V8M8 16V5M12 16v-6M16 16V9" stroke="#616161" stroke-width="1.6" stroke-linecap="round"/></svg>Analytics</a>
+
+  <div class="nav-section-label">Sales channels</div>
+  <a class="nav-item dimmed" onclick="dimClick('Online Store')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="#616161" stroke-width="1.4"/><path d="M3.5 10h13" stroke="#616161" stroke-width="1.4"/></svg>Online Store</a>
+
+  <div class="nav-section-label">Apps</div>
+  <a class="nav-item active" id="navOverview" onclick="go('overview')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1.5" stroke="#1a1a1a" stroke-width="1.5"/><rect x="11" y="3.5" width="5.5" height="5.5" rx="1.5" stroke="#1a1a1a" stroke-width="1.5"/><rect x="3.5" y="11" width="5.5" height="5.5" rx="1.5" stroke="#1a1a1a" stroke-width="1.5"/><rect x="11" y="11" width="5.5" height="5.5" rx="1.5" stroke="#1a1a1a" stroke-width="1.5"/></svg>Supplier Sync</a>
+  <a class="nav-item nav-sub" id="navCatalog" onclick="go('catalog')">Catalog</a>
+  <a class="nav-item nav-sub" id="navMargins" onclick="go('margins')">Margin rules</a>
+  <a class="nav-item nav-sub" id="navSuppliers" onclick="go('suppliers')">Suppliers</a>
+  <a class="nav-item nav-sub" id="navActivity" onclick="go('activity')">Sync activity</a>
+  <a class="nav-item nav-sub" id="navSettings" onclick="go('settings')">Settings</a>
+
+  <div class="nav-divider"></div>
+  <a class="nav-item dimmed" onclick="dimClick('Store settings')"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.5" stroke="#616161" stroke-width="1.4"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.5 1.5M13.5 13.5L15 15M15 5l-1.5 1.5M6.5 13.5L5 15" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/></svg>Settings</a>
+</nav>
+
+<main class="main"><div class="admin-content" id="content"></div></main>
+
+<div class="modal-backdrop" id="modalBackdrop"><div id="modalHost"></div></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const fmt=n=>'$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ===== ICONS ===== */
+const ICO_CHECK='<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3 7.5L6 10l5-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_DASH='<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3.5 7h7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICO_OK='<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5l6-7" stroke="#1f7a3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_WARN='<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 3l5.5 9.5h-11L8 3z" stroke="#9e6c00" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 7v3M8 11.5v.01" stroke="#9e6c00" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const ICO_ERR='<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#d72c0d" stroke-width="1.5"/><path d="M8 5v3.5M8 11v.01" stroke="#d72c0d" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const ICO_LOCK='<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="6" rx="1.5" stroke="#6b3fa0" stroke-width="1.3"/><path d="M5 6V4.5a2 2 0 014 0V6" stroke="#6b3fa0" stroke-width="1.3"/></svg>';
+const ICO_SYNC='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M3 9a6 6 0 019.5-4.8M15 9a6 6 0 01-9.5 4.8" stroke="#1f5199" stroke-width="1.5" stroke-linecap="round"/><path d="M12 2.5V5h-2.5M6 15.5V13h2.5" stroke="#1f5199" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_SYNC_OK='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M3 9a6 6 0 019.5-4.8M15 9a6 6 0 01-9.5 4.8" stroke="#1f7a3f" stroke-width="1.5" stroke-linecap="round"/><path d="M12 2.5V5h-2.5M6 15.5V13h2.5" stroke="#1f7a3f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_SEARCH='<svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#919191" stroke-width="1.6"/><path d="M14 14l3.5 3.5" stroke="#919191" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const ICO_BOX='<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="#919191" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+const ICO_BOX_SM='<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="#bbb" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const ICO_SORT_UP='<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 4l3.5 4h-7L8 4z" fill="#616161"/></svg>';
+const ICO_SORT_DOWN='<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 12l3.5-4h-7L8 12z" fill="#616161"/></svg>';
+const ICO_KEBAB='<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="5" r="1.4" fill="#616161"/><circle cx="10" cy="10" r="1.4" fill="#616161"/><circle cx="10" cy="15" r="1.4" fill="#616161"/></svg>';
+const ICO_EYE='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M1.5 9S4 4 9 4s7.5 5 7.5 5-2.5 5-7.5 5S1.5 9 1.5 9z" stroke="#616161" stroke-width="1.3"/><circle cx="9" cy="9" r="2" stroke="#616161" stroke-width="1.3"/></svg>';
+const ICO_TAG='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M3 3h5l7 7-5 5-7-7V3z" stroke="#616161" stroke-width="1.3" stroke-linejoin="round"/><circle cx="6" cy="6" r="1" fill="#616161"/></svg>';
+const ICO_PUBLISH='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6.5" stroke="#616161" stroke-width="1.3"/><path d="M9 5.5v7M5.5 9h7" stroke="#616161" stroke-width="1.3" stroke-linecap="round"/></svg>';
+const ICO_HIDE='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M3 3l12 12M7.5 7.6a2 2 0 002.9 2.8M5 5.2C2.9 6.4 1.5 9 1.5 9S4 14 9 14c1.2 0 2.2-.3 3.1-.7M13.5 11.8C15.3 10.6 16.5 9 16.5 9S14 4 9 4" stroke="#616161" stroke-width="1.3" stroke-linecap="round"/></svg>';
+const ICO_EXT='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M7 4H4v10h10v-3M11 3h4v4M15 3l-6 6" stroke="#616161" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_TRASH='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M4 5h10M7 5V3.5h4V5M5.5 5l.5 9h6l.5-9" stroke="#d72c0d" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_PENCIL='<svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M11.5 3.5l3 3L6 15l-3.5.5L3 12l8.5-8.5z" stroke="#616161" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+const ICO_CHECK_BLUE='<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5l6-7" stroke="#005bd3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_CHECK_W='<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5l6-7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_ERR_W='<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#fff" stroke-width="1.5"/><path d="M8 5v3.5M8 11v.01" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const ICO_INFO_W='<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#fff" stroke-width="1.5"/><path d="M8 7.5v3.5M8 5v.01" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const ICO_STORE='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M3 7l1-3h10l1 3M3 7v7h12V7M3 7h12" stroke="#616161" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+const ICO_BELL='<svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 3a3.2 3.2 0 00-3.2 3.2v2.4L4.5 10.4a.4.4 0 00.35.6h8.3a.4.4 0 00.35-.6L12.2 8.6V6.2A3.2 3.2 0 009 3z" stroke="#616161" stroke-width="1.3"/></svg>';
+
+const CDN='https://cdn.shopify.com/s/files/1/0620/3493/5923/files/';
+
+/* ===== DATA ===== */
+let PRODUCTS=[
+  {id:'p1', sku:'RCGSR023-24', title:'14k Solid Yellow Gold Rope Chain', variant:'3.00 mm · 24 inch', cost:1421.88,
+   img:CDN+'sr023.jpg?v=1732914850', category:'Rope', weight:'19.50 g', length:'24 in', width:'3.00 mm', karat:'14k yellow', origin:'Italy', serial:'SR023-24', stock:8, published:true, override:false, mType:'pct', mVal:12},
+  {id:'p2', sku:'DCR025-22', title:'14k Solid Yellow Gold Diamond Cut Rope Chain', variant:'3.50 mm · 22 inch', cost:1246.88,
+   img:CDN+'roy025.jpg?v=1732914848', category:'Rope', weight:'17.10 g', length:'22 in', width:'3.50 mm', karat:'14k yellow', origin:'Italy', serial:'DCR025-22', stock:5, published:true, override:false, mType:'pct', mVal:12},
+  {id:'p3', sku:'FRN-220-20', title:'14k Solid Yellow Gold Franco Chain', variant:'2.20 mm · 20 inch', cost:845.83,
+   img:CDN+'FrancoChainImage.jpg?v=1732914846', category:'Franco', weight:'11.60 g', length:'20 in', width:'2.20 mm', karat:'14k yellow', origin:'Italy', serial:'FRN220-20', stock:6, published:true, override:false, mType:'fixed', mVal:120},
+  {id:'p4', sku:'CUB-260-24', title:'14k Solid Yellow Gold Classic Miami Cuban Chain', variant:'2.60 mm · 24 inch', cost:933.33,
+   img:CDN+'CubanChainImage.jpg?v=1732914844', category:'Cuban', weight:'12.80 g', length:'24 in', width:'2.60 mm', karat:'14k yellow', origin:'Italy', serial:'CUB260-24', stock:3, published:false, override:false, mType:'pct', mVal:14},
+  {id:'p5', sku:'WG1234', title:'14k Solid White Gold Rope Chain', variant:'3.50 mm · 20 inch', cost:1180.00,
+   img:null, category:'Rope', weight:'22.50 g', length:'20 in', width:'3.50 mm', karat:'14k white', origin:'Italy', serial:'WG1234', stock:0, published:false, override:true, mType:'pct', mVal:18}
+];
+
+let SUPPLIERS=[
+  {id:'goldsupply', name:'Gold Supply', status:'connected', endpoint:'api.goldsupply.com/v2', products:5, lastSync:'2 minutes ago', alt:false}
+];
+
+const FIELD_MAP=[
+  {label:'Product title', dest:'Title', synced:true, locked:true},
+  {label:'SKU', dest:'SKU', synced:true, locked:true},
+  {label:'Supplier price', dest:'Cost (internal)', synced:true, locked:true},
+  {label:'Inventory / stock', dest:'Inventory quantity', synced:true, locked:false},
+  {label:'Weight', dest:'weight (metafield)', synced:true, locked:false},
+  {label:'Dimensions', dest:'dimensions (metafield)', synced:true, locked:false},
+  {label:'Karat', dest:'karat (metafield)', synced:true, locked:false},
+  {label:'Country of origin', dest:'origin (metafield)', synced:true, locked:false},
+  {label:'Serial number', dest:'serial (metafield)', synced:false, locked:false},
+  {label:'Product image', dest:'Featured image', synced:true, locked:false}
+];
+
+let state={
+  view:'overview',
+  activeProduct:null,
+  catalog:{tab:'all', search:'', category:'all', sortKey:'title', sortDir:'asc', selected:new Set()},
+  globalMargin:{type:'pct', val:10},
+  categoryRules:[{cat:'Rope',type:'pct',val:12},{cat:'Franco',type:'fixed',val:120},{cat:'Cuban',type:'pct',val:14}],
+  settings:{schedule:'5', autoSync:true, rounding:'cent'},
+  activityFilter:'all',
+  dirty:false,
+  importSel:new Set(),
+  importSearch:'', importCat:'all',
+  fieldMapDraft:null
+};
+let snapshots={};
+
+/* ===== MARGIN MODEL ===== */
+function effectiveMargin(p){
+  if(p.override) return {type:p.mType, val:p.mVal, source:'Custom override'};
+  const cr=state.categoryRules.find(r=>r.cat===p.category);
+  if(cr) return {type:cr.type, val:cr.val, source:p.category+' category rule'};
+  return {type:state.globalMargin.type, val:state.globalMargin.val, source:'Global default'};
+}
+function priceFrom(cost,type,val){ return type==='pct'? cost*(1+val/100) : cost+val; }
+function finalPrice(p){ const m=effectiveMargin(p); return priceFrom(p.cost,m.type,m.val); }
+function marginAmount(p){ return finalPrice(p)-p.cost; }
+function marginLabel(p){ const m=effectiveMargin(p); return m.type==='pct'? '+'+m.val+'%' : '+'+fmt(m.val); }
+
+/* ===== SAVE BAR ===== */
+function setDirty(on,text){
+  state.dirty=on;
+  $('#savebar').classList.toggle('active',on);
+  const save=$('#savebarSave');
+  if(on){ save.classList.add('enabled'); $('#savebarText').textContent=text||'Unsaved changes'; }
+  else{ save.classList.remove('enabled'); }
+}
+window.setDirty=setDirty;
+window.saveChanges=function(){ setDirty(false); showToast('Changes saved','success'); render(); };
+window.discardChanges=function(){
+  if(state.view==='margins' && snapshots.margins) revertMargins();
+  if(state.view==='settings' && snapshots.settings) state.settings=JSON.parse(snapshots.settings);
+  setDirty(false); showToast('Changes discarded','info'); render();
+};
+function revertMargins(){
+  const s=JSON.parse(snapshots.margins);
+  state.globalMargin=s.g; state.categoryRules=s.c;
+  s.p.forEach(sp=>{ const p=PRODUCTS.find(x=>x.id===sp.id); if(p){p.override=sp.o;p.mType=sp.t;p.mVal=sp.v;} });
+}
+function snapMargins(){ snapshots.margins=JSON.stringify({g:state.globalMargin,c:state.categoryRules,p:PRODUCTS.map(p=>({id:p.id,o:p.override,t:p.mType,v:p.mVal}))}); }
+
+/* ===== NAV ===== */
+window.go=function(view){
+  closePopover();
+  state.view=view; state.activeProduct=null;
+  if(state.dirty) setDirty(false);
+  if(view==='margins') snapMargins();
+  if(view==='settings') snapshots.settings=JSON.stringify(state.settings);
+  setNav(view);
+  render(); $('.main').scrollTop=0;
+};
+function setNav(view){
+  $$('.nav-item').forEach(n=>n.classList.remove('active'));
+  const map={overview:'#navOverview',catalog:'#navCatalog',product:'#navCatalog',margins:'#navMargins',suppliers:'#navSuppliers',activity:'#navActivity',settings:'#navSettings'};
+  const el=$(map[view]); if(el) el.classList.add('active');
+}
+window.dimClick=function(name){ closePopover(); showToast(name+' lives in the Shopify admin — outside this app','info'); };
+
+/* ===== RENDER ROUTER ===== */
+function render(){
+  const c=$('#content');
+  const v=state.view;
+  if(v==='overview') c.innerHTML=renderOverview();
+  else if(v==='catalog'){ c.innerHTML=renderCatalogFrame(); paintCatalog(); }
+  else if(v==='product') c.innerHTML=renderProduct();
+  else if(v==='margins') c.innerHTML=renderMargins();
+  else if(v==='suppliers') c.innerHTML=renderSuppliers();
+  else if(v==='activity') c.innerHTML=renderActivity();
+  else if(v==='settings') c.innerHTML=renderSettings();
+}
+
+/* ===== OVERVIEW ===== */
+function renderOverview(){
+  const published=PRODUCTS.filter(p=>p.published).length;
+  const issues=PRODUCTS.filter(p=>!p.img&&p.published).length + PRODUCTS.filter(p=>p.published&&p.stock===0).length;
+  const sched=state.settings.schedule;
+  return `
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <div class="page-title">Supplier Sync</div>
+      <div class="page-subtitle">Pull products from your suppliers, set your margin, and publish to your store. Prices and stock stay in sync automatically.</div>
+    </div>
+    <div class="page-header-actions"><button class="btn btn-secondary" onclick="syncNow()">${ICO_SYNC} Sync now</button></div>
+  </div>
+
+  <div class="banner banner-info">
+    <div class="ico">${ICO_SYNC}</div>
+    <div class="txt">
+      <div class="ttl">Auto-sync is ${state.settings.autoSync?'on':'off'} — every ${sched} minutes</div>
+      <div class="sub">Prices and inventory refresh from Gold Supply on a ${sched}-minute schedule. Last sync ${SUPPLIERS[0].lastSync}.</div>
+    </div>
+    <button class="btn btn-sm btn-secondary" onclick="go('settings')">Sync settings</button>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card clickable" onclick="go('catalog')">
+      <div class="stat-label">Published to store</div>
+      <div class="stat-value tabular">${published}</div>
+      <div class="stat-sub">of ${PRODUCTS.length} supplier products</div>
+    </div>
+    <div class="stat-card clickable" onclick="go('suppliers')">
+      <div class="stat-label">Connected suppliers</div>
+      <div class="stat-value tabular">${SUPPLIERS.length}</div>
+      <div class="stat-sub">${SUPPLIERS.map(s=>esc(s.name)).join(', ')}</div>
+    </div>
+    <div class="stat-card clickable" onclick="go('activity')">
+      <div class="stat-label">Last sync</div>
+      <div class="stat-value" style="font-size:18px;padding-top:5px">2 min ago</div>
+      <div class="stat-sub">Next run in ~3 min</div>
+    </div>
+    <div class="stat-card clickable" onclick="goNeedsAttention()">
+      <div class="stat-label">Needs attention</div>
+      <div class="stat-value tabular" style="color:${issues?'#9e6c00':'#1f7a3f'}">${issues}</div>
+      <div class="stat-sub">${issues? 'tap to review':'all products healthy'}</div>
+    </div>
+  </div>
+
+  <div class="layout-2col">
+    <div>
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Recently synced products</span><button class="btn-plain" onclick="go('catalog')">View catalog</button></div>
+        <div class="p-card-section" style="padding-top:12px">
+          <table class="p-table">
+            <thead><tr><th>Product</th><th class="cell-right">Supplier cost</th><th class="cell-center">Margin</th><th class="cell-right">Store price</th><th class="cell-center">Status</th></tr></thead>
+            <tbody>
+              ${PRODUCTS.slice(0,4).map(p=>`
+                <tr class="row-hover" onclick="openProduct('${p.id}')">
+                  <td><div class="prod-cell">${thumb(p)}<div><div class="prod-title link">${esc(p.title)}</div><div class="prod-meta">${p.variant} · ${p.sku}</div></div></div></td>
+                  <td class="cell-right cost-muted tabular">${fmt(p.cost)}</td>
+                  <td class="cell-center"><span class="badge ${p.override?'badge-blue':'badge-grey'}">${marginLabel(p)}</span></td>
+                  <td class="cell-right price-blue tabular">${fmt(finalPrice(p))}</td>
+                  <td class="cell-center">${statusBadge(p)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+          <div class="muted-note">${ICO_LOCK}<span>Supplier cost and your margin are stored only in this app. Your storefront shows the store price only.</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Sync health</span></div>
+        <div class="p-card-section">
+          <div class="kv"><span class="k">Schedule</span><span class="v">Every ${sched} minutes</span></div>
+          <div class="kv"><span class="k">Source</span><span class="v">Gold Supply API</span></div>
+          <div class="kv"><span class="k">Fields synced</span><span class="v">${FIELD_MAP.filter(f=>f.synced).length} of ${FIELD_MAP.length}</span></div>
+          <div class="kv"><span class="k">Last result</span><span class="v" style="color:#1f7a3f">Success</span></div>
+        </div>
+      </div>
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Quick actions</span></div>
+        <div class="p-card-section" style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="go('catalog')">Choose products to publish</button>
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="go('margins')">Edit margin rules</button>
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="openImportModal()">Import from supplier</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+window.goNeedsAttention=function(){ state.catalog.tab='published'; state.catalog.search=''; go('catalog'); showToast('Showing published products — check stock and images','info'); };
+
+window.syncNow=function(){
+  closePopover();
+  showToast('Syncing with Gold Supply…','info');
+  setTimeout(()=>{ SUPPLIERS.forEach(s=>s.lastSync='just now'); showToast('Sync complete — prices and inventory up to date','success'); if(state.view==='overview'||state.view==='activity') render(); },900);
+};
+
+/* ===== CATALOG ===== */
+function renderCatalogFrame(){
+  const cats=['Rope','Franco','Cuban'];
+  const all=PRODUCTS.length, pub=PRODUCTS.filter(p=>p.published).length, hid=all-pub;
+  const t=state.catalog.tab;
+  return `
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <div class="page-title">Catalog</div>
+      <div class="page-subtitle">${all} products from Gold Supply · ${pub} published to your store. Choose which products appear on your storefront and set their margin.</div>
+    </div>
+    <div class="page-header-actions"><button class="btn btn-secondary" onclick="openImportModal()">Import from supplier</button></div>
+  </div>
+
+  <div class="p-card mb-0">
+    <div class="tabs">
+      <button class="tab ${t==='all'?'active':''}" id="tabAll" onclick="catalogTab('all')">All <span class="badge badge-grey">${all}</span></button>
+      <button class="tab ${t==='published'?'active':''}" id="tabPublished" onclick="catalogTab('published')">Published <span class="badge badge-grey">${pub}</span></button>
+      <button class="tab ${t==='hidden'?'active':''}" id="tabHidden" onclick="catalogTab('hidden')">Hidden <span class="badge badge-grey">${hid}</span></button>
+    </div>
+    <div class="p-card-section" style="padding-bottom:10px">
+      <div class="rp-toolbar">
+        <div class="input-search" style="flex:1">${ICO_SEARCH}<input class="input" id="catalogSearchInput" placeholder="Search products by title or SKU" value="${esc(state.catalog.search)}" oninput="catalogSearch(this.value)"></div>
+        <select class="select" style="width:150px" onchange="catalogCategory(this.value)">
+          <option value="all" ${state.catalog.category==='all'?'selected':''}>All categories</option>
+          ${cats.map(c=>`<option value="${c}" ${state.catalog.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div id="catalogBody"></div>
+  </div>`;
+}
+function visibleProducts(){
+  let list=PRODUCTS.slice();
+  const c=state.catalog;
+  if(c.tab==='published') list=list.filter(p=>p.published);
+  else if(c.tab==='hidden') list=list.filter(p=>!p.published);
+  if(c.category!=='all') list=list.filter(p=>p.category===c.category);
+  if(c.search){ const q=c.search.toLowerCase(); list=list.filter(p=>(p.title+' '+p.sku).toLowerCase().includes(q)); }
+  list.sort((a,b)=>{
+    let av,bv;
+    if(c.sortKey==='cost'){av=a.cost;bv=b.cost;}
+    else if(c.sortKey==='price'){av=finalPrice(a);bv=finalPrice(b);}
+    else{av=a.title.toLowerCase();bv=b.title.toLowerCase();}
+    if(av<bv) return c.sortDir==='asc'?-1:1;
+    if(av>bv) return c.sortDir==='asc'?1:-1;
+    return 0;
+  });
+  return list;
+}
+function paintCatalog(){
+  const body=$('#catalogBody'); if(!body) return;
+  const list=visibleProducts();
+  const c=state.catalog;
+  const visIds=list.map(p=>p.id);
+  const selVisible=visIds.filter(id=>c.selected.has(id));
+  const allSel=list.length>0 && selVisible.length===list.length;
+  const partSel=selVisible.length>0 && !allSel;
+
+  let bulk='';
+  if(c.selected.size>0){
+    bulk=`<div class="bulk-bar">
+      <span class="cbx ${allSel?'checked':partSel?'partial':''}" onclick="toggleSelectAll()">${allSel?ICO_CHECK:partSel?ICO_DASH:''}</span>
+      <span class="bulk-count">${c.selected.size} selected</span>
+      <div class="bulk-actions">
+        <button class="btn btn-sm btn-secondary" onclick="bulkPublish(true)">Publish</button>
+        <button class="btn btn-sm btn-secondary" onclick="bulkPublish(false)">Hide</button>
+        <button class="btn btn-sm btn-secondary" onclick="openBulkMargin()">Set margin</button>
+        <button class="btn btn-sm btn-plain" onclick="clearSelection()">Deselect</button>
+      </div>
+    </div>`;
+  }
+
+  if(list.length===0){
+    body.innerHTML=bulk+`<div class="empty-state"><div class="ico">${ICO_BOX}</div><h3>No products found</h3><p>No products match your current filters. Try a different search or category.</p><button class="btn btn-secondary" onclick="clearFilters()">Clear filters</button></div>`;
+    return;
+  }
+
+  const sortInd=k=> c.sortKey===k ? (c.sortDir==='asc'?ICO_SORT_UP:ICO_SORT_DOWN) : ICO_SORT_DOWN;
+  const sortCls=k=> 'sortable'+(c.sortKey===k?' active':'');
+
+  body.innerHTML=bulk+`
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th class="col-check"><span class="cbx ${allSel?'checked':partSel?'partial':''}" onclick="toggleSelectAll()">${allSel?ICO_CHECK:partSel?ICO_DASH:''}</span></th>
+          <th class="${sortCls('title')}" onclick="catalogSort('title')">Product<span class="sort-ind">${sortInd('title')}</span></th>
+          <th>Specs</th>
+          <th class="cell-right ${sortCls('cost')}" onclick="catalogSort('cost')">Supplier cost<span class="sort-ind">${sortInd('cost')}</span></th>
+          <th class="cell-center">Margin</th>
+          <th class="cell-right ${sortCls('price')}" onclick="catalogSort('price')">Store price<span class="sort-ind">${sortInd('price')}</span></th>
+          <th class="cell-center">Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${list.map(p=>catalogRow(p)).join('')}</tbody>
+    </table>
+    <div class="p-card-foot"><button class="btn btn-sm btn-secondary" disabled>Previous</button><span class="cost-muted" style="font-size:12px;padding:0 8px">Showing ${list.length} of ${PRODUCTS.length}</span><button class="btn btn-sm btn-secondary" disabled>Next</button></div>
+    <div class="p-card-section" style="padding-top:14px;border-top:1px solid var(--hairline)"><div class="muted-note" style="margin:0">${ICO_LOCK}<span><span class="confidential-pill">${ICO_LOCK} Internal only</span> &nbsp;Supplier cost and margin never reach the storefront — customers see the store price only.</span></div></div>`;
+}
+function catalogRow(p){
+  const sel=state.catalog.selected.has(p.id);
+  const noImg=!p.img;
+  return `
+  <tr class="row-hover ${sel?'selected':''}">
+    <td class="col-check"><span class="cbx ${sel?'checked':''}" onclick="toggleRow('${p.id}')">${sel?ICO_CHECK:''}</span></td>
+    <td onclick="openProduct('${p.id}')"><div class="prod-cell">${thumb(p)}<div><div class="prod-title link">${esc(p.title)}</div><div class="prod-meta">${p.variant} · ${p.sku}</div></div></div></td>
+    <td onclick="openProduct('${p.id}')"><div class="prod-meta" style="margin:0">${p.weight} · ${p.karat}</div><div class="prod-meta" style="margin-top:2px">Stock: ${p.stock}</div></td>
+    <td class="cell-right cost-muted tabular" onclick="openProduct('${p.id}')">${fmt(p.cost)}</td>
+    <td class="cell-center"><button class="badge ${p.override?'badge-blue':'badge-grey'}" title="${effectiveMargin(p).source}" onclick="openMarginModal('${p.id}')">${marginLabel(p)}</button></td>
+    <td class="cell-right price-blue tabular" onclick="openProduct('${p.id}')">${fmt(finalPrice(p))}</td>
+    <td class="cell-center">${statusBadge(p)}${noImg?`<div class="prod-meta" style="margin-top:4px;color:#9e6c00">${ICO_WARN} No image</div>`:''}</td>
+    <td class="cell-center"><button class="icon-btn" onclick="rowMenu('${p.id}',this)">${ICO_KEBAB}</button></td>
+  </tr>`;
+}
+function statusBadge(p){
+  return p.published? '<span class="badge badge-green"><span class="dot"></span>Published</span>' : '<span class="badge badge-grey"><span class="dot"></span>Hidden</span>';
+}
+function thumb(p){
+  if(p.img) return `<img class="prod-thumb" src="${p.img}" alt="${esc(p.title)}">`;
+  return `<div class="prod-thumb-empty">${ICO_BOX_SM}</div>`;
+}
+
+window.catalogTab=function(t){
+  state.catalog.tab=t;
+  ['All','Published','Hidden'].forEach(x=>{ const el=$('#tab'+x); if(el) el.classList.toggle('active', x.toLowerCase()===t); });
+  paintCatalog();
+};
+window.catalogSearch=function(v){ state.catalog.search=v; paintCatalog(); };
+window.catalogCategory=function(v){ state.catalog.category=v; paintCatalog(); };
+window.catalogSort=function(k){
+  const c=state.catalog;
+  if(c.sortKey===k) c.sortDir=c.sortDir==='asc'?'desc':'asc';
+  else{ c.sortKey=k; c.sortDir='asc'; }
+  paintCatalog();
+};
+window.clearFilters=function(){ state.catalog.search=''; state.catalog.category='all'; state.catalog.tab='all'; render(); };
+window.toggleRow=function(id){ const s=state.catalog.selected; if(s.has(id)) s.delete(id); else s.add(id); paintCatalog(); };
+window.toggleSelectAll=function(){
+  const list=visibleProducts(); const s=state.catalog.selected;
+  const allSel=list.every(p=>s.has(p.id));
+  if(allSel) list.forEach(p=>s.delete(p.id)); else list.forEach(p=>s.add(p.id));
+  paintCatalog();
+};
+window.clearSelection=function(){ state.catalog.selected.clear(); paintCatalog(); };
+window.bulkPublish=function(on){
+  const s=state.catalog.selected; let n=0;
+  PRODUCTS.forEach(p=>{ if(s.has(p.id)){ p.published=on; n++; } });
+  showToast(n+' product'+(n===1?'':'s')+(on?' published':' hidden'),'success');
+  s.clear(); paintCatalog();
+  if(state.catalog.tab!=='all') render();
+};
+window.setPublish=function(id,on){
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  p.published=on;
+  showToast(esc(p.title)+(on?' published':' hidden'),'success');
+  if(state.view==='product') render(); else paintCatalog();
+};
+window.rowMenu=function(id,anchor){
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  openActionMenu(anchor,[
+    {icon:ICO_EYE, label:'View details', onClick:()=>openProduct(id)},
+    {icon:ICO_TAG, label:'Edit margin', onClick:()=>openMarginModal(id)},
+    p.published? {icon:ICO_HIDE, label:'Hide from store', onClick:()=>setPublish(id,false)} : {icon:ICO_PUBLISH, label:'Publish to store', onClick:()=>setPublish(id,true)},
+    {divider:true},
+    {icon:ICO_EXT, label:'View on storefront', onClick:()=>showToast('Opens the live product page','info')}
+  ]);
+};
+
+/* ===== BULK MARGIN MODAL ===== */
+let bulkMarginDraft={type:'pct', val:12};
+window.openBulkMargin=function(){
+  bulkMarginDraft={type:'pct', val:12};
+  const n=state.catalog.selected.size;
+  openModal(`
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">Set margin for ${n} product${n===1?'':'s'}</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="field-hint" style="margin-bottom:14px">This sets a custom margin override on every selected product. It replaces any category or global rule for those products.</div>
+        <div id="bulkMarginCtrl">${bulkMarginCtrl()}</div>
+      </div>
+      <div class="modal-foot"><div class="right"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="applyBulkMargin()">Apply margin</button></div></div>
+    </div>`);
+};
+function bulkMarginCtrl(){
+  const d=bulkMarginDraft;
+  return `
+    <label class="field-label">Margin type</label>
+    <div class="seg" style="margin-bottom:14px">
+      <button class="${d.type==='pct'?'active':''}" onclick="setBulkType('pct')">Percentage</button>
+      <button class="${d.type==='fixed'?'active':''}" onclick="setBulkType('fixed')">Fixed amount</button>
+    </div>
+    <label class="field-label">Margin value<span class="req">*</span></label>
+    <div class="input-prefix ${d.type==='pct'?'has-suffix':''}" style="width:160px">
+      ${d.type==='pct'?'':'<span class="prefix">$</span>'}
+      <input class="input tabular" id="bulkMarginInput" value="${d.val}" oninput="bulkMarginDraftVal(this.value)" style="${d.type==='pct'?'padding-left:10px':''}">
+      ${d.type==='pct'?'<span class="suffix">%</span>':''}
+    </div>`;
+}
+window.setBulkType=function(t){ bulkMarginDraft.type=t; $('#bulkMarginCtrl').innerHTML=bulkMarginCtrl(); };
+window.bulkMarginDraftVal=function(v){ const n=parseFloat(v); if(!isNaN(n)) bulkMarginDraft.val=n; };
+window.applyBulkMargin=function(){
+  const d=bulkMarginDraft;
+  if(isNaN(d.val)||d.val<0){ showToast('Enter a valid margin value','error'); return; }
+  const s=state.catalog.selected; let n=0;
+  PRODUCTS.forEach(p=>{ if(s.has(p.id)){ p.override=true; p.mType=d.type; p.mVal=d.val; n++; } });
+  closeModal(); showToast('Margin applied to '+n+' product'+(n===1?'':'s'),'success');
+  s.clear(); paintCatalog();
+};
+
+/* ===== PRODUCT DETAIL ===== */
+window.openProduct=function(id){
+  closePopover();
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  state.activeProduct=id; state.view='product'; setNav('product');
+  render(); $('.main').scrollTop=0;
+};
+function renderProduct(){
+  const p=PRODUCTS.find(x=>x.id===state.activeProduct);
+  if(!p) return renderCatalogFrame();
+  const m=effectiveMargin(p);
+  const noImg=!p.img;
+  return `
+  <div class="page-header">
+    <button class="page-back" onclick="go('catalog')"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M12 5l-5 5 5 5" stroke="#616161" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="page-title-wrap">
+      <div class="page-title">${esc(p.title)} ${statusBadge(p)}</div>
+      <div class="page-subtitle">${p.variant} · ${p.sku} · synced from Gold Supply</div>
+    </div>
+    <div class="page-header-actions"><button class="btn btn-secondary" onclick="showToast('Opens the live product page','info')">${ICO_EXT} View on storefront</button></div>
+  </div>
+
+  <div class="layout-2col">
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Media</span></div>
+        <div class="p-card-section" style="display:flex;gap:16px;align-items:center">
+          ${noImg? `<div class="prod-thumb-empty lg">${ICO_BOX}</div>` : `<img class="prod-thumb prod-thumb-lg" src="${p.img}" alt="${esc(p.title)}">`}
+          <div>
+            ${noImg? `<div class="badge badge-yellow"><span class="dot"></span>No image from supplier</div><div class="field-hint" style="margin-top:8px">This product has no image in the Gold Supply feed. It will not be published until an image is available.</div>`
+            : `<div class="prod-meta" style="margin:0">Featured image synced from the supplier CDN.</div><div class="field-hint" style="margin-top:6px">Updated with each sync. Source: Gold Supply.</div>`}
+          </div>
+        </div>
+      </div>
+
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Supplier data</span><span class="badge badge-grey">${ICO_SYNC_OK} Synced 2 min ago</span></div>
+        <div class="p-card-section">
+          <div class="kv"><span class="k">SKU</span><span class="v">${p.sku}</span></div>
+          <div class="kv"><span class="k">Category</span><span class="v">${p.category}</span></div>
+          <div class="kv"><span class="k">Weight</span><span class="v tabular">${p.weight}</span></div>
+          <div class="kv"><span class="k">Length</span><span class="v">${p.length}</span></div>
+          <div class="kv"><span class="k">Width</span><span class="v">${p.width}</span></div>
+          <div class="kv"><span class="k">Karat</span><span class="v">${p.karat}</span></div>
+          <div class="kv"><span class="k">Country of origin</span><span class="v">${p.origin}</span></div>
+          <div class="kv"><span class="k">Serial number</span><span class="v">${p.serial}</span></div>
+          <div class="kv"><span class="k">Inventory</span><span class="v tabular">${p.stock} in stock</span></div>
+          <div class="muted-note">${ICO_SYNC}<span>These fields map to Shopify metafields so your storefront theme can display them. Edit the mapping under Suppliers.</span></div>
+        </div>
+      </div>
+
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Pricing</span><button class="btn btn-sm btn-secondary" onclick="openMarginModal('${p.id}')">Edit margin</button></div>
+        <div class="p-card-section">
+          <div class="kv"><span class="k">Supplier cost</span><span class="v tabular">${fmt(p.cost)}</span></div>
+          <div class="kv"><span class="k">Margin <span class="confidential-pill">${ICO_LOCK} Internal</span></span><span class="v tabular margin-pos">${marginLabel(p)} &nbsp;(+${fmt(marginAmount(p))})</span></div>
+          <div class="kv"><span class="k">Rule applied</span><span class="v">${m.source}</span></div>
+          <div class="kv"><span class="k" style="font-weight:600;color:#1a1a1a">Store price</span><span class="v price-blue tabular" style="font-size:15px">${fmt(finalPrice(p))}</span></div>
+          <div class="muted-note">${ICO_LOCK}<span>Customers only ever see the store price. The supplier cost and your margin stay inside this app.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Storefront status</span></div>
+        <div class="p-card-section">
+          <div class="setting-toggle">
+            <div class="st-text">
+              <div class="st-title">${p.published? '<span class="badge badge-green"><span class="dot"></span>Published</span>' : '<span class="badge badge-grey"><span class="dot"></span>Hidden</span>'}</div>
+              <div class="st-desc">${p.published? 'This product is live on your store.' : 'This product is hidden from your store.'}</div>
+            </div>
+            ${p.published
+              ? `<button class="btn btn-secondary btn-sm" onclick="setPublish('${p.id}',false)">Hide</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="setPublish('${p.id}',true)" ${noImg?'disabled title="Needs an image first"':''}>Publish</button>`}
+          </div>
+          ${noImg && !p.published? `<div class="muted-note">${ICO_WARN}<span>Add an image before publishing.</span></div>`:''}
+        </div>
+      </div>
+
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Supplier</span></div>
+        <div class="p-card-section">
+          <div class="conn-card" style="border:none;padding:0">
+            <div class="conn-logo">GS</div>
+            <div class="conn-info"><div class="conn-name" style="font-size:13px">Gold Supply</div><div class="conn-meta">Last sync ${SUPPLIERS[0].lastSync}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Sync history</span></div>
+        <div class="p-card-section">
+          <div class="log-row"><div class="log-ico ok">${ICO_OK}</div><div class="log-main"><div class="log-title">Price updated</div><div class="log-meta">Cost ${fmt(p.cost-3.48)} → ${fmt(p.cost)}</div></div><div class="log-time">2 min ago</div></div>
+          <div class="log-row"><div class="log-ico ok">${ICO_OK}</div><div class="log-main"><div class="log-title">Inventory updated</div><div class="log-meta">Stock synced: ${p.stock} units</div></div><div class="log-time">2 min ago</div></div>
+          <div class="log-row"><div class="log-ico ok">${ICO_OK}</div><div class="log-main"><div class="log-title">Imported from supplier</div><div class="log-meta">Specs and image mapped</div></div><div class="log-time">3 days ago</div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===== MARGIN MODAL (per product) ===== */
+let mDraft=null;
+window.openMarginModal=function(id){
+  closePopover();
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  const m=effectiveMargin(p);
+  mDraft={id:id, override:p.override, type:p.override?p.mType:m.type, val:p.override?p.mVal:m.val};
+  openModal(buildMarginModal(p));
+};
+function buildMarginModal(p){
+  return `
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">Margin · ${esc(p.title)}</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="conn-card" style="border:none;padding:0;margin-bottom:16px">${thumb(p)}<div class="conn-info"><div class="conn-name" style="font-size:13px">${p.variant}</div><div class="conn-meta">${p.sku} · ${p.weight}</div></div></div>
+        <div id="marginModalBody">${marginModalInner(p)}</div>
+      </div>
+      <div class="modal-foot" id="marginModalFoot">${marginFootInner(p)}</div>
+    </div>`;
+}
+function marginFootInner(p){
+  return `${mDraft.override? `<button class="btn-plain" onclick="clearOverride('${p.id}')">Use ${p.category} category rule instead</button>`:''}<div class="right"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveMargin('${p.id}')">Save margin</button></div>`;
+}
+function marginModalInner(p){
+  const d=mDraft;
+  const srcNote = d.override
+    ? `<div class="banner banner-info" style="margin-bottom:16px"><div class="ico">${ICO_TAG}</div><div class="txt"><div class="ttl">Custom margin for this product</div><div class="sub">Overrides the ${p.category} category rule and global default.</div></div></div>`
+    : `<div class="banner banner-info" style="margin-bottom:16px"><div class="ico">${ICO_TAG}</div><div class="txt"><div class="ttl">Using ${effectiveMargin(p).source}</div><div class="sub">Edit below to set a custom margin just for this product.</div></div></div>`;
+  const fp=priceFrom(p.cost,d.type,d.val||0);
+  return `
+    ${srcNote}
+    <label class="field-label">Margin type</label>
+    <div class="seg" style="margin-bottom:14px">
+      <button class="${d.type==='pct'?'active':''}" onclick="setMarginType('${p.id}','pct')">Percentage</button>
+      <button class="${d.type==='fixed'?'active':''}" onclick="setMarginType('${p.id}','fixed')">Fixed amount</button>
+    </div>
+    <label class="field-label">Margin value<span class="req">*</span></label>
+    <div class="input-prefix ${d.type==='pct'?'has-suffix':''}" style="width:160px;margin-bottom:16px">
+      ${d.type==='pct'?'':'<span class="prefix">$</span>'}
+      <input class="input tabular" id="marginInput" value="${d.val}" oninput="marginPreview('${p.id}',this.value)" style="${d.type==='pct'?'padding-left:10px':''}">
+      ${d.type==='pct'?'<span class="suffix">%</span>':''}
+    </div>
+    <div class="p-card" style="margin:0;background:#fafafa">
+      <div class="p-card-section">
+        <div class="kv"><span class="k">Supplier cost</span><span class="v tabular">${fmt(p.cost)}</span></div>
+        <div class="kv"><span class="k">Margin <span class="confidential-pill">${ICO_LOCK} Internal</span></span><span class="v tabular margin-pos" id="mAmt">+${fmt(fp-p.cost)}</span></div>
+        <div class="kv"><span class="k" style="font-weight:600;color:#1a1a1a">Store price</span><span class="v price-blue tabular" id="mFinal">${fmt(fp)}</span></div>
+      </div>
+    </div>
+    <div class="muted-note">${ICO_LOCK}<span>Customers only ever see the store price.</span></div>`;
+}
+window.setMarginType=function(id,t){ mDraft.type=t; mDraft.override=true; const p=PRODUCTS.find(x=>x.id===id); $('#marginModalBody').innerHTML=marginModalInner(p); $('#marginModalFoot').innerHTML=marginFootInner(p); };
+window.marginPreview=function(id,v){
+  const n=parseFloat(v); mDraft.val=isNaN(n)?'':n; mDraft.override=true;
+  const p=PRODUCTS.find(x=>x.id===id);
+  const fp=priceFrom(p.cost,mDraft.type, isNaN(n)?0:n);
+  const a=$('#mAmt'), f=$('#mFinal'); if(a) a.textContent='+'+fmt(fp-p.cost); if(f) f.textContent=fmt(fp);
+};
+window.clearOverride=function(id){
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  p.override=false;
+  closeModal(); showToast('Reverted to '+effectiveMargin(p).source,'success');
+  if(state.view==='product') render(); else paintCatalog();
+};
+window.saveMargin=function(id){
+  const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+  const n=parseFloat($('#marginInput').value);
+  if(isNaN(n)||n<0){ showToast('Enter a valid margin value','error'); return; }
+  p.override=true; p.mType=mDraft.type; p.mVal=n;
+  closeModal(); showToast('Margin updated','success');
+  if(state.view==='product') render(); else paintCatalog();
+};
+
+/* ===== MARGIN RULES SCREEN ===== */
+function renderMargins(){
+  return `
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <div class="page-title">Margin rules</div>
+      <div class="page-subtitle">Set how much to add on top of supplier cost. The most specific rule wins: a product override beats a category rule, which beats the global default.</div>
+    </div>
+  </div>
+
+  <div class="layout-2col">
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Global default</span></div>
+        <div class="p-card-section">
+          <div class="field-hint" style="margin-bottom:12px">Applied to any product without a category rule or product override.</div>
+          <div id="globalCtrl">${globalCtrl()}</div>
+        </div>
+      </div>
+
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Category rules</span><button class="btn-plain" onclick="addCatRule()">Add rule</button></div>
+        <div class="p-card-section"><div id="catRules">${catRulesHtml()}</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">How pricing works</span></div>
+        <div class="p-card-section">
+          <div class="kv"><span class="k">Store price</span><span class="v">Cost + margin</span></div>
+          <div class="kv"><span class="k">Priority</span><span class="v">Override → Category → Global</span></div>
+          <div class="kv"><span class="k">Refresh</span><span class="v">Every ${state.settings.schedule} min</span></div>
+          <div class="muted-note">${ICO_LOCK}<span>Margin is never shown to customers or written to Shopify product fields.</span></div>
+        </div>
+      </div>
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Live preview</span></div>
+        <div class="p-card-section"><div id="marginPreview">${marginPreviewHtml()}</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+function globalCtrl(){
+  const g=state.globalMargin;
+  return `
+    <div class="gap8">
+      <div class="seg">
+        <button class="${g.type==='pct'?'active':''}" onclick="setGlobalType('pct')">Percentage</button>
+        <button class="${g.type==='fixed'?'active':''}" onclick="setGlobalType('fixed')">Fixed amount</button>
+      </div>
+      <div class="input-prefix ${g.type==='pct'?'has-suffix':''}" style="width:140px">
+        ${g.type==='pct'?'':'<span class="prefix">$</span>'}
+        <input class="input tabular" value="${g.val}" oninput="setGlobalVal(this.value)" style="${g.type==='pct'?'padding-left:10px':''}">
+        ${g.type==='pct'?'<span class="suffix">%</span>':''}
+      </div>
+    </div>`;
+}
+function catRulesHtml(){
+  if(state.categoryRules.length===0) return `<div class="field-hint">No category rules yet. Products fall back to the global default.</div>`;
+  return state.categoryRules.map((r,i)=>`
+    <div class="rule-row">
+      <div class="rule-scope">
+        <div class="scope-name">${r.cat} chains</div>
+        <div class="scope-meta">${PRODUCTS.filter(p=>p.category===r.cat).length} products in this category</div>
+      </div>
+      <div class="rule-controls">
+        <div class="seg">
+          <button class="${r.type==='pct'?'active':''}" onclick="setCatType(${i},'pct')">%</button>
+          <button class="${r.type==='fixed'?'active':''}" onclick="setCatType(${i},'fixed')">$</button>
+        </div>
+        <div class="input-prefix ${r.type==='pct'?'has-suffix':''}" style="width:108px">
+          ${r.type==='pct'?'':'<span class="prefix">$</span>'}
+          <input class="input tabular" value="${r.val}" oninput="setCatVal(${i},this.value)" style="${r.type==='pct'?'padding-left:10px':''}">
+          ${r.type==='pct'?'<span class="suffix">%</span>':''}
+        </div>
+        <button class="icon-btn" onclick="delCatRule(${i})" title="Delete rule">${ICO_TRASH}</button>
+      </div>
+    </div>`).join('');
+}
+function marginPreviewHtml(){
+  const sample=PRODUCTS.slice(0,3);
+  return `
+    <div class="field-hint" style="margin-bottom:10px">Live store prices using your current rules.</div>
+    ${sample.map(p=>`<div class="kv"><span class="k">${p.category} · ${fmt(p.cost)} <span style="color:#919191">(${effectiveMargin(p).source.replace(' category rule','').replace('Global default','global')})</span></span><span class="v price-blue tabular">${fmt(finalPrice(p))}</span></div>`).join('')}`;
+}
+window.setGlobalType=function(t){ state.globalMargin.type=t; $('#globalCtrl').innerHTML=globalCtrl(); $('#marginPreview').innerHTML=marginPreviewHtml(); setDirty(true,'Margin rules changed'); };
+window.setGlobalVal=function(v){ const n=parseFloat(v); if(!isNaN(n)) state.globalMargin.val=n; $('#marginPreview').innerHTML=marginPreviewHtml(); setDirty(true,'Margin rules changed'); };
+window.setCatType=function(i,t){ state.categoryRules[i].type=t; $('#catRules').innerHTML=catRulesHtml(); $('#marginPreview').innerHTML=marginPreviewHtml(); setDirty(true,'Margin rules changed'); };
+window.setCatVal=function(i,v){ const n=parseFloat(v); if(!isNaN(n)) state.categoryRules[i].val=n; $('#marginPreview').innerHTML=marginPreviewHtml(); setDirty(true,'Margin rules changed'); };
+window.delCatRule=function(i){ const r=state.categoryRules[i]; state.categoryRules.splice(i,1); $('#catRules').innerHTML=catRulesHtml(); $('#marginPreview').innerHTML=marginPreviewHtml(); setDirty(true,'Margin rules changed'); showToast(r.cat+' rule removed','info'); };
+window.addCatRule=function(){
+  const used=state.categoryRules.map(r=>r.cat);
+  const avail=['Rope','Franco','Cuban','Box','Figaro'].filter(c=>!used.includes(c));
+  const cat=avail.length?avail[0]:'New category';
+  state.categoryRules.push({cat:cat,type:'pct',val:10});
+  $('#catRules').innerHTML=catRulesHtml(); $('#marginPreview').innerHTML=marginPreviewHtml();
+  setDirty(true,'Margin rules changed'); showToast(cat+' rule added','success');
+};
+
+/* ===== SUPPLIERS ===== */
+function renderSuppliers(){
+  return `
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <div class="page-title">Suppliers</div>
+      <div class="page-subtitle">Connect supplier APIs. Each supplier syncs independently on your ${state.settings.schedule}-minute schedule. Built to scale — adding a supplier is configuration, not a rebuild.</div>
+    </div>
+    <div class="page-header-actions"><button class="btn btn-primary" onclick="openAddSupplier()">Add supplier</button></div>
+  </div>
+
+  <div class="p-card mb-0">
+    <div class="p-card-section">
+      ${SUPPLIERS.map(s=>`
+        <div class="conn-card" style="margin-bottom:12px">
+          <div class="conn-logo ${s.alt?'alt':''}">${esc(s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase())}</div>
+          <div class="conn-info">
+            <div class="conn-name">${esc(s.name)} <span class="badge badge-green"><span class="dot"></span>Connected</span></div>
+            <div class="conn-meta">${esc(s.endpoint)} · ${s.products} products · last sync ${s.lastSync}</div>
+          </div>
+          <div class="gap8">
+            <button class="btn btn-sm btn-secondary" onclick="openFieldMap('${s.id}')">Field mapping</button>
+            <button class="icon-btn" onclick="supplierMenu('${s.id}',this)">${ICO_KEBAB}</button>
+          </div>
+        </div>`).join('')}
+
+      <div class="conn-add" onclick="openAddSupplier()">
+        <div class="conn-logo">+</div>
+        <div class="conn-info">
+          <div class="conn-name" style="color:#616161">Add another supplier</div>
+          <div class="conn-meta">Connect a second supplier API — products, pricing, and stock sync on the same schedule.</div>
+        </div>
+      </div>
+      <div class="muted-note">${ICO_SYNC}<span>Day one runs on Gold Supply. The data model treats every supplier the same, so growth is just adding a connection.</span></div>
+    </div>
+  </div>`;
+}
+window.supplierMenu=function(id,anchor){
+  openActionMenu(anchor,[
+    {icon:ICO_PENCIL, label:'Edit connection', onClick:()=>showToast('Edit supplier credentials and endpoint','info')},
+    {icon:ICO_SYNC, label:'Sync now', onClick:()=>syncNow()},
+    {divider:true},
+    {icon:ICO_TRASH, label:'Disconnect', destructive:true, onClick:()=>disconnectSupplier(id)}
+  ]);
+};
+window.disconnectSupplier=function(id){
+  if(SUPPLIERS.length<=1){ showToast('You need at least one connected supplier','error'); return; }
+  const s=SUPPLIERS.find(x=>x.id===id);
+  SUPPLIERS=SUPPLIERS.filter(x=>x.id!==id);
+  showToast((s?s.name:'Supplier')+' disconnected','info'); render();
+};
+let addSupDraft={name:'',url:''};
+window.openAddSupplier=function(){
+  addSupDraft={name:'',url:''};
+  openModal(`
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">Add supplier</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div style="margin-bottom:14px"><label class="field-label">Supplier name<span class="req">*</span></label><input class="input" placeholder="e.g. Premier Metals" oninput="addSupName(this.value)"></div>
+        <div style="margin-bottom:14px"><label class="field-label">API base URL<span class="req">*</span></label><input class="input" placeholder="https://api.supplier.com/v1" oninput="addSupUrl(this.value)"></div>
+        <div style="margin-bottom:14px"><label class="field-label">API key<span class="req">*</span></label><input class="input" placeholder="Paste the supplier's API key"><div class="field-hint">Stored encrypted and used only for server-side sync.</div></div>
+        <div><label class="field-label">Authentication</label>
+          <select class="select"><option>API key (header)</option><option>Bearer token</option><option>OAuth 2.0</option></select>
+        </div>
+        <div class="muted-note">${ICO_SYNC}<span>After connecting, you'll map the supplier's fields and choose which products to publish.</span></div>
+      </div>
+      <div class="modal-foot"><div class="right"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="connectSupplier()">Connect supplier</button></div></div>
+    </div>`);
+};
+window.addSupName=function(v){ addSupDraft.name=v; };
+window.addSupUrl=function(v){ addSupDraft.url=v; };
+window.connectSupplier=function(){
+  const name=addSupDraft.name.trim()||'New Supplier';
+  const url=addSupDraft.url.trim()||'api.supplier.com/v1';
+  const id='sup'+(SUPPLIERS.length+1);
+  SUPPLIERS.push({id:id, name:name, status:'connected', endpoint:url, products:0, lastSync:'just now', alt:true});
+  closeModal(); showToast(name+' connected — ready to import products','success'); render();
+};
+window.openFieldMap=function(id){
+  state.fieldMapDraft=FIELD_MAP.map(f=>({label:f.label,dest:f.dest,synced:f.synced,locked:f.locked}));
+  const s=SUPPLIERS.find(x=>x.id===id);
+  openModal(`
+    <div class="modal modal-lg">
+      <div class="modal-header"><span class="modal-title">Field mapping · ${esc(s?s.name:'Supplier')}</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="field-hint" style="margin-bottom:14px">Choose which supplier fields to sync and where each lands on the Shopify product. Specs map to metafields so your theme can display them.</div>
+        <div id="fieldMapRows">${fieldMapRows()}</div>
+      </div>
+      <div class="modal-foot"><div class="right"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveFieldMap()">Save mapping</button></div></div>
+    </div>`);
+};
+function fieldMapRows(){
+  const d=state.fieldMapDraft;
+  return `<table class="p-table">
+    <thead><tr><th>Supplier field</th><th>Shopify destination</th><th class="cell-center">Sync</th></tr></thead>
+    <tbody>${d.map((f,i)=>`
+      <tr>
+        <td style="font-weight:500">${f.label}</td>
+        <td class="cost-muted">${f.dest}</td>
+        <td class="cell-center">
+          ${f.locked
+            ? `<span class="badge badge-grey" title="Required field">Required</span>`
+            : `<span class="cbx ${f.synced?'checked':''}" onclick="toggleFieldMap(${i})">${f.synced?ICO_CHECK:''}</span>`}
+        </td>
+      </tr>`).join('')}</tbody>
+  </table>`;
+}
+window.toggleFieldMap=function(i){ const f=state.fieldMapDraft[i]; f.synced=!f.synced; $('#fieldMapRows').innerHTML=fieldMapRows(); };
+window.saveFieldMap=function(){
+  state.fieldMapDraft.forEach((f,i)=>{ FIELD_MAP[i].synced=f.synced; });
+  closeModal(); showToast('Field mapping saved','success');
+};
+
+/* ===== SYNC ACTIVITY ===== */
+const ACTIVITY=[
+  {type:'ok', title:'Scheduled sync completed', meta:'5 products checked · 3 price updates · 0 errors', time:'2 min ago'},
+  {type:'ok', title:'Price updated — 14k Rope Chain 24"', meta:'Supplier cost $1,418.40 → $1,421.88 · store price recalculated', time:'2 min ago'},
+  {type:'warn', title:'Product skipped — 14k White Gold Rope', meta:'No image from supplier; not published', time:'7 min ago'},
+  {type:'ok', title:'Scheduled sync completed', meta:'5 products checked · 1 price update · 0 errors', time:'7 min ago'},
+  {type:'ok', title:'Inventory updated — Franco Chain 20"', meta:'Stock 4 → 6 units', time:'12 min ago'},
+  {type:'err', title:'Supplier API timeout', meta:'Retry succeeded on the next run · no data lost', time:'22 min ago'},
+  {type:'ok', title:'Scheduled sync completed', meta:'5 products checked · 0 price updates · 0 errors', time:'27 min ago'}
+];
+function renderActivity(){
+  const f=state.activityFilter;
+  const filtered=ACTIVITY.filter(l=> f==='all'?true : f==='updates'?l.type==='ok' : f==='warnings'?l.type==='warn' : l.type==='err');
+  const segBtn=(key,label)=>`<button class="${f===key?'active':''}" onclick="setActivityFilter('${key}')">${label}</button>`;
+  return `
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <div class="page-title">Sync activity</div>
+      <div class="page-subtitle">Every scheduled run and price change from your suppliers.</div>
+    </div>
+    <div class="page-header-actions"><button class="btn btn-secondary" onclick="syncNow()">${ICO_SYNC} Sync now</button></div>
+  </div>
+
+  <div class="banner banner-info">
+    <div class="ico">${ICO_SYNC}</div>
+    <div class="txt">
+      <div class="ttl">Next scheduled sync in ~3 minutes</div>
+      <div class="sub">Runs automatically every ${state.settings.schedule} minutes. Frequency is bounded by the Gold Supply API's own refresh rate.</div>
+    </div>
+  </div>
+
+  <div class="p-card mb-0">
+    <div class="p-card-header"><span class="p-card-title">Activity log</span><button class="btn-plain" onclick="showToast('Exports the full sync log as CSV','info')">Export log</button></div>
+    <div class="p-card-section" style="padding-bottom:8px">
+      <div class="seg">${segBtn('all','All')}${segBtn('updates','Updates')}${segBtn('warnings','Warnings')}${segBtn('errors','Errors')}</div>
+    </div>
+    <div class="p-card-section" style="padding-top:0">
+      ${filtered.length? filtered.map(l=>{
+        const cls=l.type==='ok'?'ok':l.type==='warn'?'warn':'err';
+        const ic=l.type==='ok'?ICO_OK:l.type==='warn'?ICO_WARN:ICO_ERR;
+        return `<div class="log-row"><div class="log-ico ${cls}">${ic}</div><div class="log-main"><div class="log-title">${l.title}</div><div class="log-meta">${l.meta}</div></div><div class="log-time">${l.time}</div></div>`;
+      }).join('') : `<div class="empty-state" style="padding:32px"><div class="ico">${ICO_OK}</div><h3>Nothing here</h3><p>No ${f} entries in the recent activity window.</p></div>`}
+    </div>
+  </div>`;
+}
+window.setActivityFilter=function(f){ state.activityFilter=f; render(); };
+
+/* ===== SETTINGS ===== */
+function renderSettings(){
+  const s=state.settings;
+  const sched=[['1','Every 1 minute'],['5','Every 5 minutes'],['10','Every 10 minutes'],['15','Every 15 minutes'],['30','Every 30 minutes'],['60','Every hour']];
+  const round=[['cent','Nearest cent (exact)'],['99','Charm pricing (.99)'],['whole','Whole dollar']];
+  return `
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <div class="page-title">Settings</div>
+      <div class="page-subtitle">Control how often the app syncs and how store prices are calculated.</div>
+    </div>
+  </div>
+
+  <div class="layout-2col">
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Sync schedule</span></div>
+        <div class="p-card-section">
+          <div class="setting-toggle" style="margin-bottom:16px">
+            <div class="st-text">
+              <div class="st-title">Automatic sync <span class="badge ${s.autoSync?'badge-green':'badge-grey'}"><span class="dot"></span>${s.autoSync?'On':'Off'}</span></div>
+              <div class="st-desc">When on, the app pulls prices and inventory from your suppliers on a schedule.</div>
+            </div>
+            <button class="btn btn-sm ${s.autoSync?'btn-secondary':'btn-primary'}" onclick="toggleAutoSync()">${s.autoSync?'Turn off':'Turn on'}</button>
+          </div>
+          <label class="field-label">Sync frequency</label>
+          <select class="select" style="max-width:260px" ${s.autoSync?'':'disabled'} onchange="setSchedule(this.value)">
+            ${sched.map(o=>`<option value="${o[0]}" ${s.schedule===o[0]?'selected':''}>${o[1]}</option>`).join('')}
+          </select>
+          <div class="muted-note">${ICO_SYNC}<span>How fresh prices are is bounded by your supplier's own API refresh rate. A 5-minute schedule is the recommended balance of freshness and reliability.</span></div>
+        </div>
+      </div>
+
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Pricing</span></div>
+        <div class="p-card-section">
+          <label class="field-label">Price rounding</label>
+          <select class="select" style="max-width:260px" onchange="setRounding(this.value)">
+            ${round.map(o=>`<option value="${o[0]}" ${s.rounding===o[0]?'selected':''}>${o[1]}</option>`).join('')}
+          </select>
+          <div class="field-hint" style="margin-top:8px">Applied to the final store price after the margin is added.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="p-card">
+        <div class="p-card-header"><span class="p-card-title">Margin privacy</span></div>
+        <div class="p-card-section">
+          <div class="setting-toggle">
+            <div class="st-text">
+              <div class="st-title"><span class="confidential-pill">${ICO_LOCK} Locked on</span></div>
+              <div class="st-desc">Supplier cost and your margin are never written to Shopify or shown to customers. This protects your pricing and cannot be turned off.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="p-card mb-0">
+        <div class="p-card-header"><span class="p-card-title">Current setup</span></div>
+        <div class="p-card-section">
+          <div class="kv"><span class="k">Schedule</span><span class="v">Every ${s.schedule} min</span></div>
+          <div class="kv"><span class="k">Auto-sync</span><span class="v">${s.autoSync?'On':'Off'}</span></div>
+          <div class="kv"><span class="k">Suppliers</span><span class="v">${SUPPLIERS.length} connected</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+window.toggleAutoSync=function(){ state.settings.autoSync=!state.settings.autoSync; setDirty(true,'Settings changed'); render(); };
+window.setSchedule=function(v){ state.settings.schedule=v; setDirty(true,'Settings changed'); };
+window.setRounding=function(v){ state.settings.rounding=v; setDirty(true,'Settings changed'); };
+
+/* ===== IMPORT MODAL ===== */
+window.openImportModal=function(){
+  closePopover();
+  state.importSel=new Set(PRODUCTS.filter(p=>p.published).map(p=>p.id));
+  state.importSearch=''; state.importCat='all';
+  openModal(`
+    <div class="modal modal-lg">
+      <div class="modal-header"><span class="modal-title">Import products from Gold Supply</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="rp-toolbar">
+          <div class="input-search" style="flex:1">${ICO_SEARCH}<input class="input" id="importSearchInput" placeholder="Search supplier catalog" oninput="importSearch(this.value)"></div>
+          <select class="select" style="width:150px" onchange="importCat(this.value)">
+            <option value="all">All categories</option><option value="Rope">Rope</option><option value="Franco">Franco</option><option value="Cuban">Cuban</option>
+          </select>
+        </div>
+        <div class="rp-head">
+          <span><span class="cbx" id="importSelAll" onclick="importToggleAll()"></span></span>
+          <span>Product</span><span class="cell-right">Cost</span><span class="cell-right">Store price</span>
+        </div>
+        <div id="importRows"></div>
+      </div>
+      <div class="modal-foot">
+        <span class="cost-muted" style="font-size:12px" id="importCount"></span>
+        <div class="right"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="confirmImport()">Publish selected</button></div>
+      </div>
+    </div>`);
+  paintImport();
+};
+function importVisible(){
+  let list=PRODUCTS.slice();
+  if(state.importCat!=='all') list=list.filter(p=>p.category===state.importCat);
+  if(state.importSearch){ const q=state.importSearch.toLowerCase(); list=list.filter(p=>(p.title+' '+p.sku).toLowerCase().includes(q)); }
+  return list;
+}
+function paintImport(){
+  const wrap=$('#importRows'); if(!wrap) return;
+  const list=importVisible();
+  if(list.length===0){ wrap.innerHTML=`<div class="empty-state" style="padding:28px"><div class="ico">${ICO_BOX}</div><h3>No products found</h3><p>Try a different search or category.</p></div>`; }
+  else wrap.innerHTML=list.map(p=>importRow(p)).join('');
+  const visSel=list.filter(p=>state.importSel.has(p.id)).length;
+  const allEl=$('#importSelAll');
+  if(allEl){ allEl.className='cbx '+(list.length>0&&visSel===list.length?'checked':visSel>0?'partial':''); allEl.innerHTML=(list.length>0&&visSel===list.length)?ICO_CHECK:visSel>0?ICO_DASH:''; }
+  const cnt=$('#importCount'); if(cnt) cnt.textContent=state.importSel.size+' of '+PRODUCTS.length+' products selected';
+}
+function importRow(p){
+  const sel=state.importSel.has(p.id);
+  return `<div class="rp-row ${sel?'sel':''}" onclick="importToggle('${p.id}')">
+    <span><span class="cbx ${sel?'checked':''}">${sel?ICO_CHECK:''}</span></span>
+    <span class="rp-prod">${thumb(p)}<div><div class="prod-title">${esc(p.title)}</div><div class="prod-meta">${p.variant} · ${p.sku}</div></div></span>
+    <span class="cell-right cost-muted tabular">${fmt(p.cost)}</span>
+    <span class="cell-right price-blue tabular">${fmt(finalPrice(p))}</span>
+  </div>`;
+}
+window.importToggle=function(id){ const s=state.importSel; if(s.has(id)) s.delete(id); else s.add(id); paintImport(); };
+window.importToggleAll=function(){
+  const list=importVisible(); const s=state.importSel;
+  const allSel=list.every(p=>s.has(p.id));
+  if(allSel) list.forEach(p=>s.delete(p.id)); else list.forEach(p=>s.add(p.id));
+  paintImport();
+};
+window.importSearch=function(v){ state.importSearch=v; paintImport(); };
+window.importCat=function(v){ state.importCat=v; paintImport(); };
+window.confirmImport=function(){
+  PRODUCTS.forEach(p=>{ p.published=state.importSel.has(p.id); });
+  closeModal(); showToast(state.importSel.size+' products set to publish','success');
+  if(state.view==='catalog') paintCatalog(); else render();
+};
+
+/* ===== POPOVERS ===== */
+function openActionMenu(anchor, items){
+  closePopover();
+  const pop=document.createElement('div');
+  pop.className='popover'; pop.id='activePopover';
+  items.forEach(it=>{
+    if(it.divider){ const d=document.createElement('div'); d.className='popover-divider'; pop.appendChild(d); return; }
+    if(it.header){ const l=document.createElement('div'); l.className='popover-label'; l.textContent=it.label; pop.appendChild(l); return; }
+    const b=document.createElement('button');
+    b.className='action-item'+(it.destructive?' destructive':'')+(it.checked?' checked-item':'');
+    b.innerHTML=(it.icon||'')+'<span>'+it.label+'</span>'+(it.checked?ICO_CHECK_BLUE:'');
+    b.addEventListener('click',function(ev){ ev.stopPropagation(); closePopover(); if(it.onClick) it.onClick(); });
+    pop.appendChild(b);
+  });
+  document.body.appendChild(pop);
+  positionPopover(pop, anchor);
+  setTimeout(()=>document.addEventListener('click', outsideClose),0);
+}
+function positionPopover(pop, anchor){
+  const r=anchor.getBoundingClientRect();
+  const pw=pop.offsetWidth, ph=pop.offsetHeight;
+  let left=r.right-pw; if(left<8) left=8; if(left+pw>window.innerWidth-8) left=window.innerWidth-pw-8;
+  let top=r.bottom+6; if(top+ph>window.innerHeight-8) top=Math.max(8,r.top-ph-6);
+  pop.style.left=left+'px'; pop.style.top=top+'px';
+}
+function outsideClose(e){ const pop=$('#activePopover'); if(pop && !pop.contains(e.target)) closePopover(); }
+function closePopover(){ const pop=$('#activePopover'); if(pop) pop.remove(); document.removeEventListener('click', outsideClose); }
+
+window.storeMenu=function(anchor){
+  openActionMenu(anchor,[
+    {header:true, label:'Stores'},
+    {icon:ICO_STORE, label:'Gold Supply', checked:true, onClick:()=>showToast('Already on Gold Supply','info')},
+    {icon:ICO_STORE, label:'Demo Store 2', onClick:()=>showToast('Switching stores is part of the admin','info')},
+    {divider:true},
+    {icon:ICO_PENCIL, label:'Manage stores', onClick:()=>showToast('Manage stores in your Shopify account','info')}
+  ]);
+};
+window.notifMenu=function(anchor){
+  openActionMenu(anchor,[
+    {header:true, label:'Notifications'},
+    {icon:ICO_SYNC, label:'Sync completed · 2m ago', onClick:()=>go('activity')},
+    {icon:ICO_BELL, label:'3 new orders today', onClick:()=>dimClick('Orders')}
+  ]);
+};
+window.helpMenu=function(anchor){
+  openActionMenu(anchor,[
+    {header:true, label:'Help'},
+    {icon:ICO_EYE, label:'App documentation', onClick:()=>showToast('Opens the Supplier Sync docs','info')},
+    {icon:ICO_BELL, label:'Contact support', onClick:()=>showToast('Opens a support request','info')}
+  ]);
+};
+window.topSearch=function(anchor){
+  openActionMenu(anchor,[
+    {header:true, label:'Admin search'},
+    {icon:ICO_SEARCH, label:'Search products', onClick:()=>go('catalog')},
+    {icon:ICO_SEARCH, label:'Search orders', onClick:()=>dimClick('Orders')}
+  ]);
+};
+
+/* ===== MODAL + TOAST ===== */
+window.openModal=function(html){ closePopover(); $('#modalHost').innerHTML=html; $('#modalBackdrop').classList.add('open'); };
+window.closeModal=function(){ $('#modalBackdrop').classList.remove('open'); $('#modalHost').innerHTML=''; };
+$('#modalBackdrop').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closePopover(); closeModal(); } });
+
+window.showToast=function(msg,type){
+  type=type||'success';
+  const t=document.createElement('div');
+  t.className='toast toast-'+type;
+  const ic=type==='success'?ICO_CHECK_W:type==='error'?ICO_ERR_W:ICO_INFO_W;
+  t.innerHTML=ic+'<span>'+msg+'</span>';
+  $('#toastWrap').appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); },2800);
+};
+
+/* ===== INIT ===== */
+render();
+
+})();
+</script>
+</body>
+</html>
