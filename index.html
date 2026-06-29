@@ -304,12 +304,25 @@ label.field-label .req{color:var(--red);margin-left:2px}
 .muted-note svg{flex-shrink:0;margin-top:1px}
 .mb-0{margin-bottom:0}
 .gap8{display:flex;gap:8px;align-items:center}
+
+/* ===== DEMO ORIENTATION ===== */
+.demo-guide-btn{position:fixed;bottom:20px;right:20px;z-index:120;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px 0 12px;border-radius:20px;background:var(--surface);border:1px solid var(--card-border);color:var(--text);font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.10)}
+.demo-guide-btn:hover{background:#f7f7f7}
+.welcome-p{font-size:13px;line-height:1.55;color:var(--text)}
+.welcome-p + .welcome-p{margin-top:12px}
+.welcome-try{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text);line-height:1.5}
+.welcome-try + .welcome-try{margin-top:8px}
+.welcome-num{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--badge-blue-bg);color:var(--badge-blue-text);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* ===== SCREEN GUIDE ===== */
+.screen-guide{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 12px;border-radius:8px;background:#f2f6ff;border:1px solid #dbe4f7;font-size:13px;color:var(--subdued);line-height:1.45}
+.screen-guide .badge{flex-shrink:0}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="topbar-logo"><span class="mark">S</span></div>
+  <div class="topbar-logo"><span class="mark">S</span><span class="badge badge-grey">Sample data</span></div>
   <div class="topbar-search">
     <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#9a9a9a" stroke-width="1.6"/><path d="M14 14l3.5 3.5" stroke="#9a9a9a" stroke-width="1.6" stroke-linecap="round"/></svg>
     <input type="text" placeholder="Search the admin" onclick="topSearch(this)" readonly>
@@ -369,6 +382,7 @@ label.field-label .req{color:var(--red);margin-left:2px}
 
 <div class="modal-backdrop" id="modalBackdrop"><div id="modalHost"></div></div>
 <div class="toast-wrap" id="toastWrap"></div>
+<button class="demo-guide-btn" onclick="openWelcome()" title="Open the demo guide"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#616161" stroke-width="1.4"/><path d="M8 8a2 2 0 113 1.7c-.6.4-1 .8-1 1.6" stroke="#616161" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="14" r=".9" fill="#616161"/></svg>Demo guide</button>
 
 <script>
 (function(){
@@ -517,6 +531,16 @@ function render(){
   else if(v==='settings') c.innerHTML=renderSettings();
 }
 
+/* ===== SCREEN GUIDE ===== */
+const GUIDE_OVERVIEW="Start here. Use the left sidebar to move between the app's sections.";
+const GUIDE_CATALOG="Pick which chains go live and set each one's margin.";
+const GUIDE_PRODUCT="Everything synced for this product, with its price breakdown and status.";
+const GUIDE_MARGINS="Set your markup. Customers see only the final price, never your cost or margin.";
+const GUIDE_SUPPLIERS="Where Gold Supply connects, and where you add more suppliers later.";
+const GUIDE_ACTIVITY="The log of automatic price and stock updates from the supplier.";
+const GUIDE_SETTINGS="How often the app syncs and how prices are rounded.";
+function screenGuide(text){ return `<div class="screen-guide"><span class="badge badge-blue">Guide</span><span>${text}</span></div>`; }
+
 /* ===== OVERVIEW ===== */
 function renderOverview(){
   const published=PRODUCTS.filter(p=>p.published).length;
@@ -530,6 +554,8 @@ function renderOverview(){
     </div>
     <div class="page-header-actions"><button class="btn btn-secondary" onclick="syncNow()">${ICO_SYNC} Sync now</button></div>
   </div>
+
+  ${screenGuide(GUIDE_OVERVIEW)}
 
   <div class="banner banner-info">
     <div class="ico">${ICO_SYNC}</div>
@@ -627,6 +653,8 @@ function renderCatalogFrame(){
     </div>
     <div class="page-header-actions"><button class="btn btn-secondary" onclick="openImportModal()">Import from supplier</button></div>
   </div>
+
+  ${screenGuide(GUIDE_CATALOG)}
 
   <div class="p-card mb-0">
     <div class="tabs">
@@ -846,6 +874,8 @@ function renderProduct(){
     <div class="page-header-actions"><button class="btn btn-secondary" onclick="showToast('Opens the live product page','info')">${ICO_EXT} View on storefront</button></div>
   </div>
 
+  ${screenGuide(GUIDE_PRODUCT)}
+
   <div class="layout-2col">
     <div>
       <div class="p-card">
@@ -1009,6 +1039,8 @@ function renderMargins(){
     </div>
   </div>
 
+  ${screenGuide(GUIDE_MARGINS)}
+
   <div class="layout-2col">
     <div>
       <div class="p-card">
@@ -1109,6 +1141,8 @@ function renderSuppliers(){
     </div>
     <div class="page-header-actions"><button class="btn btn-primary" onclick="openAddSupplier()">Add supplier</button></div>
   </div>
+
+  ${screenGuide(GUIDE_SUPPLIERS)}
 
   <div class="p-card mb-0">
     <div class="p-card-section">
@@ -1235,6 +1269,8 @@ function renderActivity(){
     <div class="page-header-actions"><button class="btn btn-secondary" onclick="syncNow()">${ICO_SYNC} Sync now</button></div>
   </div>
 
+  ${screenGuide(GUIDE_ACTIVITY)}
+
   <div class="banner banner-info">
     <div class="ico">${ICO_SYNC}</div>
     <div class="txt">
@@ -1271,6 +1307,8 @@ function renderSettings(){
       <div class="page-subtitle">Control how often the app syncs and how store prices are calculated.</div>
     </div>
   </div>
+
+  ${screenGuide(GUIDE_SETTINGS)}
 
   <div class="layout-2col">
     <div>
@@ -1473,8 +1511,35 @@ window.showToast=function(msg,type){
   setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); },2800);
 };
 
+/* ===== DEMO ORIENTATION ===== */
+let welcomeShown=false;
+function welcomeHtml(){
+  return `
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">Welcome to your Supplier Sync demo</span><button class="modal-close" onclick="closeModal()">${ICO_X}</button></div>
+      <div class="modal-body">
+        <p class="welcome-p">This is a clickable demo of the app we would build for Gold Supply, loaded with sample data using your own chains. Nothing is connected to a live store, so click around freely. Nothing will break, and nothing goes live.</p>
+        <p class="welcome-p">Start in the left sidebar under <strong>Supplier Sync</strong>. The main sections are Catalog, Margin rules, Suppliers, Sync activity, and Settings.</p>
+        <div class="p-card" style="margin:16px 0 0;background:#fafafa">
+          <div class="p-card-section">
+            <div style="font-weight:600;color:var(--heading);font-size:13px;margin-bottom:10px">Two things to try</div>
+            <div class="welcome-try"><span class="welcome-num">1</span><span>On Catalog, switch a chain between Published and Hidden and watch the store price.</span></div>
+            <div class="welcome-try"><span class="welcome-num">2</span><span>On Margin rules, change a percentage and the prices update instantly.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot"><div class="right"><button class="btn btn-secondary" onclick="welcomeGoCatalog()">Go to Catalog</button><button class="btn btn-primary" onclick="closeModal()">Start exploring</button></div></div>
+    </div>`;
+}
+window.openWelcome=function(auto){
+  if(auto){ if(welcomeShown) return; welcomeShown=true; }
+  openModal(welcomeHtml());
+};
+window.welcomeGoCatalog=function(){ closeModal(); go('catalog'); };
+
 /* ===== INIT ===== */
 render();
+openWelcome(true);
 
 })();
 </script>
